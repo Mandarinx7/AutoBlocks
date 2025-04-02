@@ -177,31 +177,22 @@ const Block = ({
   return (
     <div
       ref={blockRef}
-      className={`absolute block-card ${isDragging ? 'is-dragging' : ''}`}
+      className={`absolute p-0 bg-white rounded-lg shadow-md ${isDragging ? 'shadow-lg' : ''}`}
       style={{
         left: `${block.position.x}px`,
         top: `${block.position.y}px`,
+        width: '240px',
+        zIndex: isDragging ? 10 : 1,
         touchAction: 'none',
         userSelect: 'none'
       }}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
-      {/* Connection points */}
-      <div className="connection-point connection-point-input" 
-        data-connection-point="input"
-        data-block-id={block.id}
-      />
-      <div className="connection-point connection-point-output"
-        data-connection-point="output"
-        data-block-id={block.id}
-      />
-      
       <div 
-        className="block-header cursor-move"
-        style={{ backgroundColor: config.headerColor }}
+        className={`block-header ${config.headerColor} text-white px-3 py-2 rounded-t-lg flex items-center justify-between cursor-move`}
       >
-        <span className="font-medium text-sm">{config.label}</span>
+        <span className="font-medium">{config.label}</span>
         <div className="flex items-center space-x-1">
           <button 
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -219,28 +210,34 @@ const Block = ({
       </div>
       
       {!isCollapsed && (
-        <div className="block-content">
+        <div className="p-3">
           <div className="space-y-3">
             {config.params && config.params.map((param) => (
-              <div key={param.name} className="block-param">
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+              <div key={param.name}>
+                <label className="block text-xs text-gray-600">
                   {param.label}
                 </label>
-                <div className="relative">
+                <div className="relative mt-1">
                   {renderParamInput(param)}
                 </div>
               </div>
             ))}
-            
-            {/* Block description */}
-            {config.description && (
-              <div className="mt-3 text-xs text-gray-500 italic">
-                {config.description}
-              </div>
-            )}
           </div>
         </div>
       )}
+      
+      <div className="flex items-center justify-between p-2 bg-gray-50 rounded-b-lg">
+        <div 
+          className={`connection-point w-3 h-3 rounded-full ${config.connectionPointColor} opacity-70`}
+          data-connection-point="input"
+          data-block-id={block.id}
+        />
+        <div 
+          className={`connection-point w-3 h-3 rounded-full ${config.connectionPointColor} opacity-70`}
+          data-connection-point="output"
+          data-block-id={block.id}
+        />
+      </div>
     </div>
   );
 };
