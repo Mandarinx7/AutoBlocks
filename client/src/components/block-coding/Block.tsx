@@ -73,9 +73,10 @@ const Block = ({
 
   const handleMouseMove = (e: MouseEvent) => {
     if (isDraggingLocal && blockRef.current) {
-      // Calculate absolute position based on mouse coordinates
-      const newX = e.clientX - dragOffset.x;
-      const newY = e.clientY - dragOffset.y;
+      // Pass absolute screen coordinates to the parent component
+      // The Canvas will handle conversion to canvas coordinates
+      const newX = e.clientX;
+      const newY = e.clientY;
       
       // Using requestAnimationFrame for smoother movement
       requestAnimationFrame(() => {
@@ -126,9 +127,10 @@ const Block = ({
 
   const handleTouchMove = (e: TouchEvent) => {
     if (isDraggingLocal && blockRef.current) {
-      // Calculate absolute position based on touch coordinates
-      const newX = e.touches[0].clientX - dragOffset.x;
-      const newY = e.touches[0].clientY - dragOffset.y;
+      // Pass absolute screen coordinates from touch directly to parent component
+      // The Canvas will handle conversion to canvas coordinates
+      const newX = e.touches[0].clientX;
+      const newY = e.touches[0].clientY;
       
       // Using requestAnimationFrame for smoother movement
       requestAnimationFrame(() => {
@@ -212,7 +214,7 @@ const Block = ({
         top: `${block.position.y}px`,
         width: '200px',  // Changed from 240px to 200px (10 * GRID_SIZE)
         height: 'auto',  // Height will adjust based on content
-        zIndex: isDragging ? 10 : 1,
+        zIndex: isDragging ? 50 : 1,  // Higher z-index when dragging
         touchAction: 'none',
         userSelect: 'none'
       }}

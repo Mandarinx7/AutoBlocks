@@ -216,7 +216,16 @@ const Canvas = ({
 
   // Modified drag move handler with snap-to-grid
   const handleDragMoveWithSnap = (blockId: string, newPosition: { x: number, y: number }) => {
-    const snappedPosition = snapToGrid(newPosition.x, newPosition.y);
+    // Convert position from screen coordinates to canvas coordinates
+    const canvasPos = {
+      x: (newPosition.x - position.x) / scale,
+      y: (newPosition.y - position.y) / scale
+    };
+    
+    // Snap to grid after converting to canvas coordinates
+    const snappedPosition = snapToGrid(canvasPos.x, canvasPos.y);
+    
+    // Update block with snapped canvas coordinates
     onUpdateBlock(blockId, { position: snappedPosition });
   };
 
