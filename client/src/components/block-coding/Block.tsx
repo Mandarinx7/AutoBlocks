@@ -181,7 +181,8 @@ const Block = ({
       style={{
         left: `${block.position.x}px`,
         top: `${block.position.y}px`,
-        width: '240px',
+        width: '200px',  // Changed from 240px to 200px (10 * GRID_SIZE)
+        height: 'auto',  // Height will adjust based on content
         zIndex: isDragging ? 10 : 1,
         touchAction: 'none',
         userSelect: 'none'

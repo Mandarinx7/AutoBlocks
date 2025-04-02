@@ -68,10 +68,15 @@ const BlockCoding = () => {
   };
 
   const handleAddBlock = (blockType: string) => {
+    // Make the initial position align with grid
+    const GRID_SIZE = 20;
+    const initialX = Math.round(100 / GRID_SIZE) * GRID_SIZE;
+    const initialY = Math.round(100 / GRID_SIZE) * GRID_SIZE;
+    
     const newBlock: Block = {
       id: `block-${Date.now()}`,
       type: blockType,
-      position: { x: 100, y: 100 },
+      position: { x: initialX, y: initialY },
       params: {},
       connections: {
         inputs: [],
