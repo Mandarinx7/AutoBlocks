@@ -3,6 +3,9 @@ import { getBlockConfig } from "@/lib/block-coding/blockTypes";
 import Block from "@/components/block-coding/Block";
 import { Block as BlockType, Edge, Flow } from "@/pages/BlockCoding";
 
+// Grid size in pixels for snapping
+export const GRID_SIZE = 20;
+
 interface CanvasProps {
   flow: Flow;
   onUpdateBlock: (blockId: string, updates: Partial<BlockType>) => void;
@@ -278,8 +281,7 @@ const Canvas = ({
     setDraggingBlockId(blockId);
   };
 
-  // Grid snapping constants
-  const GRID_SIZE = 20; // Size of grid in pixels
+  // Using the GRID_SIZE constant defined above
   // Always snap to grid, no threshold
   
   const snapToGrid = (position: { x: number; y: number }): { x: number; y: number } => {
@@ -439,8 +441,16 @@ const Canvas = ({
           style={{
             transform: `translate(${canvasPosition.x}px, ${canvasPosition.y}px) scale(${scale})`,
             transformOrigin: '0 0',
-            width: '5000px',
-            height: '5000px'
+            width: '10000px',
+            height: '10000px',
+            backgroundSize: `${GRID_SIZE * 5}px ${GRID_SIZE * 5}px, ${GRID_SIZE}px ${GRID_SIZE}px`,
+            backgroundImage: `
+              linear-gradient(to right, rgba(81, 92, 230, 0.1) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(81, 92, 230, 0.1) 1px, transparent 1px),
+              linear-gradient(to right, rgba(81, 92, 230, 0.05) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(81, 92, 230, 0.05) 1px, transparent 1px)
+            `,
+            backgroundPosition: `-${canvasPosition.x}px -${canvasPosition.y}px`
           }}
         >
           {/* SVG for connectors */}
@@ -452,15 +462,25 @@ const Canvas = ({
               
               if (!sourceBlock || !targetBlock) return null;
               
-              // Calculate connector points
-              const x1 = sourceBlock.position.x + 120; // Assuming block width is 240px
-              const y1 = sourceBlock.position.y + 70;  // Approximate output point
-              const x2 = targetBlock.position.x;
-              const y2 = targetBlock.position.y + 70;  // Approximate input point
+              // Calculate connector points - blocks are 240px wide
+              const x1 = sourceBlock.position.x + 120; // Middle of source block (width/2)
+              const y1 = sourceBlock.position.y + 140; // Bottom connection point (adjusted for height)
               
-              // Calculate control points for curved connector
-              const deltaX = Math.abs(x2 - x1) * 0.5;
-              const path = `M${x1},${y1} C${x1+deltaX},${y1} ${x2-deltaX},${y2} ${x2},${y2}`;
+              // Input point at the top of target block
+              const x2 = targetBlock.position.x + 120; // Middle of target block
+              const y2 = targetBlock.position.y; // Top of target block
+              
+              // Snap all points to grid
+              const sx1 = Math.round(x1 / GRID_SIZE) * GRID_SIZE;
+              const sy1 = Math.round(y1 / GRID_SIZE) * GRID_SIZE;
+              const sx2 = Math.round(x2 / GRID_SIZE) * GRID_SIZE;
+              const sy2 = Math.round(y2 / GRID_SIZE) * GRID_SIZE;
+              
+              // Calculate midpoint Y value for the orthogonal path
+              const midY = sy1 + (sy2 - sy1) / 2;
+              
+              // Create a path with right angles (orthogonal)
+              const path = `M${sx1},${sy1} L${sx1},${midY} L${sx2},${midY} L${sx2},${sy2}`;
               
               return (
                 <g key={edge.id}>
@@ -480,13 +500,22 @@ const Canvas = ({
               );
             })}
             
-            {/* Connection being created */}
+            {/* Connection being created - orthogonal path with right angles */}
             {isConnecting && connectionStart && (
               <path
-                d={`M${connectionStart.x},${connectionStart.y} 
-                    C${connectionStart.x + 50},${connectionStart.y} 
-                    ${connectionEnd.x - 50},${connectionEnd.y} 
-                    ${connectionEnd.x},${connectionEnd.y}`}
+                d={(() => {
+                  // Snap points to grid
+                  const x1 = Math.round(connectionStart.x / GRID_SIZE) * GRID_SIZE;
+                  const y1 = Math.round(connectionStart.y / GRID_SIZE) * GRID_SIZE;
+                  const x2 = Math.round(connectionEnd.x / GRID_SIZE) * GRID_SIZE;
+                  const y2 = Math.round(connectionEnd.y / GRID_SIZE) * GRID_SIZE;
+                  
+                  // Calculate midpoint for orthogonal path
+                  const midY = y1 + (y2 - y1) / 2;
+                  
+                  // Create a path with right angles (orthogonal)
+                  return `M${x1},${y1} L${x1},${midY} L${x2},${midY} L${x2},${y2}`;
+                })()}
                 className="stroke-purple-500 stroke-2 fill-none stroke-dashed"
                 strokeDasharray="5,5"
               />

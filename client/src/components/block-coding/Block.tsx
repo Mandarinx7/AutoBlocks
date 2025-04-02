@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Block as BlockType } from "@/pages/BlockCoding";
 import { BlockConfig } from "@/lib/block-coding/blockTypes";
+import { GRID_SIZE } from "@/components/block-coding/Canvas";
 
 interface BlockProps {
   block: BlockType;
@@ -80,23 +81,34 @@ const Block = ({
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const targetElement = e.target as HTMLElement;
     
-    // Only initiate drag on header
-    if (targetElement.closest('.block-header')) {
-      setIsDraggingLocal(true);
-      onDragStart();
-      
-      const rect = blockRef.current?.getBoundingClientRect();
-      if (rect) {
-        // Store the offset from the click point to the top-left corner of the block
-        setDragOffset({
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
-        });
-      }
-      
-      e.preventDefault();
-      e.stopPropagation();
+    // Skip if we're clicking on a connection point
+    if (targetElement.classList.contains('connection-point') || 
+        targetElement.closest('.connection-point')) {
+      return;
     }
+    
+    // Allow dragging from any part of the block
+    setIsDraggingLocal(true);
+    onDragStart();
+    
+    const rect = blockRef.current?.getBoundingClientRect();
+    if (rect) {
+      // Store the offset from the click point to the top-left corner of the block
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const snapToGrid = (position: { x: number; y: number }): { x: number; y: number } => {
+    // Always snap to grid, more predictable behavior
+    const snapX = Math.round(position.x / GRID_SIZE) * GRID_SIZE;
+    const snapY = Math.round(position.y / GRID_SIZE) * GRID_SIZE;
+    return { x: snapX, y: snapY };
   };
 
   const handleMouseMove = (e: MouseEvent) => {
@@ -105,8 +117,11 @@ const Block = ({
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
       
-      // Calculate position in canvas space
-      onDragMove({ x: newX, y: newY });
+      // Snap to grid
+      const snappedPosition = snapToGrid({ x: newX, y: newY });
+      
+      // Send position update
+      onDragMove(snappedPosition);
     }
   };
 
@@ -132,27 +147,33 @@ const Block = ({
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const targetElement = e.target as HTMLElement;
     
-    // Only initiate drag on header
-    if (targetElement.closest('.block-header')) {
-      setIsDraggingLocal(true);
-      onDragStart();
-      
-      const rect = blockRef.current?.getBoundingClientRect();
-      if (rect && e.touches.length > 0) {
-        // Store the offset from the touch point to the top-left corner of the block
-        setDragOffset({
-          x: e.touches[0].clientX - rect.left,
-          y: e.touches[0].clientY - rect.top
-        });
-      }
-      
-      // Prevent default to avoid scrolling while dragging
-      if (typeof e.preventDefault === 'function') {
-        e.preventDefault();
-      }
-      if (typeof e.stopPropagation === 'function') {
-        e.stopPropagation();
-      }
+    // Skip if we're touching a connection point or button
+    if (targetElement.classList.contains('connection-point') || 
+        targetElement.closest('.connection-point') ||
+        targetElement.tagName === 'BUTTON' ||
+        targetElement.closest('button')) {
+      return;
+    }
+    
+    // Allow dragging from any part of the block
+    setIsDraggingLocal(true);
+    onDragStart();
+    
+    const rect = blockRef.current?.getBoundingClientRect();
+    if (rect && e.touches.length > 0) {
+      // Store the offset from the touch point to the top-left corner of the block
+      setDragOffset({
+        x: e.touches[0].clientX - rect.left,
+        y: e.touches[0].clientY - rect.top
+      });
+    }
+    
+    // Prevent default to avoid scrolling while dragging
+    if (typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
+    if (typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
     }
   };
 
@@ -188,8 +209,11 @@ const Block = ({
       const newX = (touchX / scale) - (dragOffset.x / scale);
       const newY = (touchY / scale) - (dragOffset.y / scale);
       
+      // Snap to grid
+      const snappedPosition = snapToGrid({ x: newX, y: newY });
+      
       // Send position update
-      onDragMove({ x: newX, y: newY });
+      onDragMove(snappedPosition);
       
       // Prevent scrolling
       if (typeof e.preventDefault === 'function') {
@@ -320,22 +344,33 @@ const Block = ({
         </div>
       )}
       
-      <div className="flex items-center justify-between p-2 bg-gray-50 rounded-b-lg">
+      {/* Input connection point at top center */}
+      <div 
+        className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10"
+        style={{ pointerEvents: 'auto' }}
+      >
         <div 
-          className={`connection-point w-4 h-4 rounded-full ${config.connectionPointColor} opacity-70 hover:opacity-100 hover:scale-125 transition-all cursor-pointer flex items-center justify-center`}
+          className={`connection-point w-4 h-4 rounded-full ${config.connectionPointColor} opacity-70 hover:opacity-100 hover:scale-125 transition-all cursor-pointer flex items-center justify-center shadow-md`}
           data-connection-point="input"
           data-block-id={block.id}
-          title="Drag from another block to connect here"
+          title="Inputs connect here"
         >
           {block.connections.inputs.length > 0 && (
             <div className="w-2 h-2 bg-white rounded-full" />
           )}
         </div>
+      </div>
+      
+      {/* Output connection point at bottom center */}
+      <div 
+        className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-10"
+        style={{ pointerEvents: 'auto' }}  
+      >
         <div 
-          className={`connection-point w-4 h-4 rounded-full ${config.connectionPointColor} opacity-70 hover:opacity-100 hover:scale-125 transition-all cursor-pointer flex items-center justify-center`}
+          className={`connection-point w-4 h-4 rounded-full ${config.connectionPointColor} opacity-70 hover:opacity-100 hover:scale-125 transition-all cursor-pointer flex items-center justify-center shadow-md`}
           data-connection-point="output"
           data-block-id={block.id}
-          title="Drag from here to another block to connect"
+          title="Connect to next block from here"
         >
           {block.connections.outputs.length > 0 && (
             <div className="w-2 h-2 bg-white rounded-full" />
