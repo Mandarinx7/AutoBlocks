@@ -328,9 +328,13 @@ const Canvas = ({
       const dx = e.clientX - startPanPoint.x;
       const dy = e.clientY - startPanPoint.y;
       
+      // Snap canvas position to grid for smoother movement
+      const snappedX = Math.round((startCanvasPosition.x + dx) / (GRID_SIZE/2)) * (GRID_SIZE/2);
+      const snappedY = Math.round((startCanvasPosition.y + dy) / (GRID_SIZE/2)) * (GRID_SIZE/2);
+      
       setCanvasPosition({
-        x: startCanvasPosition.x + dx,
-        y: startCanvasPosition.y + dy
+        x: snappedX,
+        y: snappedY
       });
     }
   };
@@ -375,9 +379,13 @@ const Canvas = ({
       const dx = e.touches[0].clientX - startPanPoint.x;
       const dy = e.touches[0].clientY - startPanPoint.y;
       
+      // Snap to grid for smoother movement
+      const snappedX = Math.round((startCanvasPosition.x + dx) / (GRID_SIZE/2)) * (GRID_SIZE/2);
+      const snappedY = Math.round((startCanvasPosition.y + dy) / (GRID_SIZE/2)) * (GRID_SIZE/2);
+      
       setCanvasPosition({
-        x: startCanvasPosition.x + dx,
-        y: startCanvasPosition.y + dy
+        x: snappedX,
+        y: snappedY
       });
     } else if (isPinching && e.touches.length === 2 && pinchStartDistance !== null) {
       // Two finger pinch-zoom
@@ -402,10 +410,21 @@ const Canvas = ({
         // Adjust position to zoom toward fingers
         const dx = midX - startPanPoint.x;
         const dy = midY - startPanPoint.y;
-        setCanvasPosition(prev => ({
-          x: prev.x - dx * (dScale - 1) / dScale,
-          y: prev.y - dy * (dScale - 1) / dScale
-        }));
+        
+        setCanvasPosition(prev => {
+          // Calculate adjusted position and snap to grid
+          const newX = prev.x - dx * (dScale - 1) / dScale;
+          const newY = prev.y - dy * (dScale - 1) / dScale;
+          
+          // Snap to grid
+          const snappedX = Math.round(newX / (GRID_SIZE/4)) * (GRID_SIZE/4);
+          const snappedY = Math.round(newY / (GRID_SIZE/4)) * (GRID_SIZE/4);
+          
+          return {
+            x: snappedX,
+            y: snappedY
+          };
+        });
       }
     }
     
@@ -443,13 +462,11 @@ const Canvas = ({
             transformOrigin: '0 0',
             width: '10000px',
             height: '10000px',
-            backgroundSize: `${GRID_SIZE * 5}px ${GRID_SIZE * 5}px, ${GRID_SIZE}px ${GRID_SIZE}px`,
+            backgroundColor: 'white',
             backgroundImage: `
-              linear-gradient(to right, rgba(81, 92, 230, 0.1) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(81, 92, 230, 0.1) 1px, transparent 1px),
-              linear-gradient(to right, rgba(81, 92, 230, 0.05) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(81, 92, 230, 0.05) 1px, transparent 1px)
+              radial-gradient(circle, rgba(0, 120, 212, 0.15) 1px, transparent 1px)
             `,
+            backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
             backgroundPosition: `-${canvasPosition.x}px -${canvasPosition.y}px`
           }}
         >
@@ -486,7 +503,7 @@ const Canvas = ({
                 <g key={edge.id}>
                   <path
                     d={path}
-                    className="stroke-purple-500 stroke-2 fill-none"
+                    className="stroke-blue-500 stroke-2 fill-none"
                     markerEnd="url(#arrowhead)"
                   />
                   {/* Wider invisible path for better touch target */}
@@ -516,7 +533,7 @@ const Canvas = ({
                   // Create a path with right angles (orthogonal)
                   return `M${x1},${y1} L${x1},${midY} L${x2},${midY} L${x2},${y2}`;
                 })()}
-                className="stroke-purple-500 stroke-2 fill-none stroke-dashed"
+                className="stroke-blue-500 stroke-2 fill-none stroke-dashed"
                 strokeDasharray="5,5"
               />
             )}
@@ -531,7 +548,7 @@ const Canvas = ({
                 refY="3.5"
                 orient="auto"
               >
-                <polygon points="0 0, 10 3.5, 0 7" className="fill-purple-500" />
+                <polygon points="0 0, 10 3.5, 0 7" className="fill-blue-500" />
               </marker>
             </defs>
           </svg>

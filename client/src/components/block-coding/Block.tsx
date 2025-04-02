@@ -201,13 +201,28 @@ const Block = ({
       // Calculate new position, adjusting for canvas scale and offset
       const touch = e.touches[0];
       
+      // Get the current transform matrix values
+      const transformMatrix = canvasStyle.transform.match(/matrix\((.*?)\)/);
+      let translateX = 0;
+      let translateY = 0;
+      
+      if (transformMatrix && transformMatrix[1]) {
+        const values = transformMatrix[1].split(',');
+        translateX = parseFloat(values[4]);
+        translateY = parseFloat(values[5]);
+      }
+      
       // Get touch position relative to canvas
       const touchX = touch.clientX - canvasRect.left;
       const touchY = touch.clientY - canvasRect.top;
       
-      // Calculate block position considering scale and drag offset
-      const newX = (touchX / scale) - (dragOffset.x / scale);
-      const newY = (touchY / scale) - (dragOffset.y / scale);
+      // Calculate absolute position in canvas space
+      const canvasX = (touchX - translateX) / scale;
+      const canvasY = (touchY - translateY) / scale;
+      
+      // Calculate final block position accounting for drag offset
+      const newX = canvasX - (dragOffset.x / scale);
+      const newY = canvasY - (dragOffset.y / scale);
       
       // Snap to grid
       const snappedPosition = snapToGrid({ x: newX, y: newY });
