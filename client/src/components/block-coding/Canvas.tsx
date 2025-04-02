@@ -226,7 +226,13 @@ const Canvas = ({
   const [isPanning, setIsPanning] = useState(false);
   const [startPanPoint, setStartPanPoint] = useState({ x: 0, y: 0 });
   const [startCanvasPosition, setStartCanvasPosition] = useState({ x: 0, y: 0 });
+  const [pinchStartDistance, setPinchStartDistance] = useState<number | null>(null);
+  const [startScale, setStartScale] = useState(1);
+  const [isPinching, setIsPinching] = useState(false);
+  const MIN_SCALE = 0.5;
+  const MAX_SCALE = 3;
 
+  // Handle mouse pan interactions
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     // Only pan if clicked directly on the canvas, not on a block
     if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('canvas-background')) {
@@ -253,15 +259,102 @@ const Canvas = ({
     setIsPanning(false);
   };
 
+  // Handle touch pan and zoom interactions
+  const handleCanvasTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 1) {
+      // Single finger pan
+      setIsPanning(true);
+      setStartPanPoint({ 
+        x: e.touches[0].clientX, 
+        y: e.touches[0].clientY 
+      });
+      setStartCanvasPosition({ ...canvasPosition });
+    } else if (e.touches.length === 2) {
+      // Two finger pinch-zoom
+      setIsPinching(true);
+      setIsPanning(false);
+      
+      // Calculate distance between fingers
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      setPinchStartDistance(distance);
+      setStartScale(scale);
+      
+      // Calculate midpoint for scaling around it
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      setStartPanPoint({ x: midX, y: midY });
+    }
+  };
+  
+  const handleCanvasTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (isPanning && e.touches.length === 1) {
+      // Single finger pan
+      const dx = e.touches[0].clientX - startPanPoint.x;
+      const dy = e.touches[0].clientY - startPanPoint.y;
+      
+      setCanvasPosition({
+        x: startCanvasPosition.x + dx,
+        y: startCanvasPosition.y + dy
+      });
+    } else if (isPinching && e.touches.length === 2 && pinchStartDistance !== null) {
+      // Two finger pinch-zoom
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Calculate scale factor based on finger distance change
+      const scaleFactor = distance / pinchStartDistance;
+      const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, startScale * scaleFactor));
+      
+      setScale(newScale);
+      
+      // Calculate the midpoint between the two fingers
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      
+      // We could also adjust position to zoom toward the pinch center point
+      // This is a simplified version of that logic
+      const dScale = newScale / startScale;
+      if (dScale !== 1) {
+        // Adjust position to zoom toward fingers
+        const dx = midX - startPanPoint.x;
+        const dy = midY - startPanPoint.y;
+        setCanvasPosition(prev => ({
+          x: prev.x - dx * (dScale - 1) / dScale,
+          y: prev.y - dy * (dScale - 1) / dScale
+        }));
+      }
+    }
+    
+    // Prevent default browser behavior (page scrolling/zooming)
+    if (isPanning || isPinching) {
+      e.preventDefault();
+    }
+  };
+  
+  const handleCanvasTouchEnd = () => {
+    setIsPanning(false);
+    setIsPinching(false);
+    setPinchStartDistance(null);
+  };
+
   return (
-    <div className="relative flex-1 overflow-hidden bg-gray-50 touch-none">
+    <div className="relative flex-1 overflow-hidden bg-gray-50">
       <div 
         ref={canvasRef}
         className="absolute inset-0 w-full h-full overflow-hidden canvas-background"
+        style={{ touchAction: 'none' }}
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleCanvasMouseUp}
         onMouseLeave={handleCanvasMouseUp}
+        onTouchStart={handleCanvasTouchStart}
+        onTouchMove={handleCanvasTouchMove}
+        onTouchEnd={handleCanvasTouchEnd}
+        onTouchCancel={handleCanvasTouchEnd}
       >
         <div 
           className="absolute"
