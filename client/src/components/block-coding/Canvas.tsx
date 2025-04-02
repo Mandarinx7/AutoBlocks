@@ -16,9 +16,18 @@ interface CanvasProps {
 const GRID_SIZE = 20;
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 3;
-const DEFAULT_CANVAS_SIZE = 2000; // px
-const BLOCK_WIDTH = 200; // Width in pixels
+const DEFAULT_CANVAS_SIZE = 1000; // px - Smaller for mobile screens
+const BLOCK_WIDTH = 200; // Width in pixels (10 * GRID_SIZE for grid alignment)
 const BLOCK_HEIGHT = 100; // Approximate height in pixels for connection point calculation
+
+/**
+ * Canvas component that provides:
+ * - Pinch-to-zoom with 2 fingers on mobile
+ * - Pan/drag with 1 finger on mobile or mouse on desktop
+ * - Auto-expanding canvas as blocks are added
+ * - Snap-to-grid functionality for precise positioning
+ * - Connection lines between blocks
+ */
 
 const Canvas = ({ 
   flow, 
@@ -59,6 +68,85 @@ const Canvas = ({
       setPosition({ x: centerX, y: centerY });
     }
   }, []);
+  
+  // Handle touch events for pinch zoom
+  const [initialTouchDistance, setInitialTouchDistance] = useState<number | null>(null);
+  const [initialScale, setInitialScale] = useState<number>(1);
+  
+  // Calculate distance between two touch points
+  const getTouchDistance = (touches: React.TouchList): number => {
+    if (touches.length < 2) return 0;
+    
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+  
+  // Get center point between two touches
+  const getTouchCenter = (touches: React.TouchList): { x: number, y: number } => {
+    if (touches.length < 2) return { x: touches[0].clientX, y: touches[0].clientY };
+    
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2
+    };
+  };
+  
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // Initialize pinch-to-zoom
+      e.preventDefault();
+      setInitialTouchDistance(getTouchDistance(e.touches));
+      setInitialScale(scale);
+    } else if (e.touches.length === 1) {
+      // Single touch = pan
+      setIsPanning(true);
+      setStartPos({ 
+        x: e.touches[0].clientX - position.x, 
+        y: e.touches[0].clientY - position.y 
+      });
+    }
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && initialTouchDistance) {
+      // Handle pinch zoom
+      e.preventDefault();
+      const currentDistance = getTouchDistance(e.touches);
+      const touchRatio = currentDistance / initialTouchDistance;
+      const newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, initialScale * touchRatio));
+      
+      // Zoom centered on touch center
+      if (canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const center = getTouchCenter(e.touches);
+        const touchX = center.x - rect.left;
+        const touchY = center.y - rect.top;
+        
+        const newPos = {
+          x: touchX - (touchX - position.x) * (newScale / scale),
+          y: touchY - (touchY - position.y) * (newScale / scale)
+        };
+        
+        setPosition(newPos);
+      }
+      
+      setScale(newScale);
+    } else if (e.touches.length === 1 && isPanning) {
+      // Handle panning with one finger
+      const newPos = { 
+        x: e.touches[0].clientX - startPos.x, 
+        y: e.touches[0].clientY - startPos.y 
+      };
+      setPosition(newPos);
+    }
+  };
+  
+  const handleTouchEnd = () => {
+    setInitialTouchDistance(null);
+    setIsPanning(false);
+  };
 
   // Handle mouse events for panning
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -141,6 +229,10 @@ const Canvas = ({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
       {/* Grid background */}
       <div 
@@ -152,23 +244,11 @@ const Canvas = ({
         }}
       />
       
-      {/* Zoom controls */}
+      {/* Scale indicator */}
       <div className="absolute bottom-20 right-6 bg-white rounded-lg shadow-lg z-30 flex">
-        <button 
-          onClick={() => setScale(Math.min(MAX_ZOOM, scale + 0.2))}
-          className="p-2 hover:bg-gray-100"
-        >
-          +
-        </button>
-        <div className="p-2 border-x border-gray-200">
+        <div className="p-2">
           {Math.round(scale * 100)}%
         </div>
-        <button 
-          onClick={() => setScale(Math.max(MIN_ZOOM, scale - 0.2))}
-          className="p-2 hover:bg-gray-100"
-        >
-          -
-        </button>
       </div>
       
       <div 

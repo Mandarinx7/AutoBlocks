@@ -5,6 +5,14 @@ import { Select } from "@/components/ui/select";
 import { Block as BlockType } from "@/pages/BlockCoding";
 import { BlockConfig } from "@/lib/block-coding/blockTypes";
 
+/**
+ * Block component that provides:
+ * - Draggable blocks from anywhere on the block (not just the header)
+ * - Touch and mouse controls for dragging
+ * - Inline parameter editing without opening modals
+ * - Collapsible content for better space management
+ * - Visual connection points for flows
+ */
 interface BlockProps {
   block: BlockType;
   config: BlockConfig;
@@ -43,7 +51,8 @@ const Block = ({
   }, [block.params, config.params, onUpdateParams]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('.block-header')) {
+    // Allow dragging from anywhere in the block except buttons
+    if (!(e.target as HTMLElement).closest('button')) {
       setIsDraggingLocal(true);
       onDragStart();
       
@@ -87,7 +96,8 @@ const Block = ({
   }, [isDraggingLocal, handleMouseMove]);
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('.block-header')) {
+    // Allow dragging from anywhere in the block except buttons
+    if (!(e.target as HTMLElement).closest('button')) {
       setIsDraggingLocal(true);
       onDragStart();
       
