@@ -51,7 +51,7 @@ const Block = ({
     
     // Get canvas transformation
     const canvasStyle = window.getComputedStyle(canvasElement);
-    const transform = canvasStyle.transform || canvasStyle.webkitTransform;
+    const transform = canvasStyle.transform || canvasStyle.webkitTransform || '';
     
     // Default values if we can't parse transform
     let scaleValue = 1;
@@ -158,12 +158,37 @@ const Block = ({
 
   const handleTouchMove = (e: TouchEvent) => {
     if (isDraggingLocal && blockRef.current && e.touches.length > 0) {
-      // Calculate new position
-      const touch = e.touches[0];
-      const newX = touch.clientX - dragOffset.x;
-      const newY = touch.clientY - dragOffset.y;
+      // Get the canvas element
+      const canvasElement = document.querySelector('.canvas-background');
+      if (!canvasElement) return;
+      const canvasRect = canvasElement.getBoundingClientRect();
       
-      // Calculate position in canvas space
+      // Get current scale from canvas transform
+      const canvasStyle = window.getComputedStyle(canvasElement);
+      const transform = canvasStyle.transform || canvasStyle.webkitTransform || '';
+      let scale = 1;
+      
+      // Extract scale value from transform matrix if present
+      if (transform && transform !== 'none') {
+        const matrix = transform.match(/^matrix\((.+)\)$/);
+        if (matrix) {
+          const values = matrix[1].split(', ');
+          scale = parseFloat(values[0]);
+        }
+      }
+      
+      // Calculate new position, adjusting for canvas scale and offset
+      const touch = e.touches[0];
+      
+      // Get touch position relative to canvas
+      const touchX = touch.clientX - canvasRect.left;
+      const touchY = touch.clientY - canvasRect.top;
+      
+      // Calculate block position considering scale and drag offset
+      const newX = (touchX / scale) - (dragOffset.x / scale);
+      const newY = (touchY / scale) - (dragOffset.y / scale);
+      
+      // Send position update
       onDragMove({ x: newX, y: newY });
       
       // Prevent scrolling

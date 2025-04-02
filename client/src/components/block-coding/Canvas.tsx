@@ -54,21 +54,54 @@ const Canvas = ({
         if (blockId && pointType) {
           setIsConnecting(true);
           
+          // Get the canvas element
+          const canvasElement = document.querySelector('.canvas-background');
+          if (!canvasElement) return;
+          const canvasRect = canvasElement.getBoundingClientRect();
+          
+          if (!canvasRect) return;
+          
+          // Get canvas transform
+          const canvasStyle = window.getComputedStyle(canvasElement);
+          const transform = canvasStyle.transform || canvasStyle.webkitTransform;
+          let scale = 1;
+          let translateX = 0;
+          let translateY = 0;
+          
+          // Extract scale and translation values from transform matrix
+          if (transform && transform !== 'none') {
+            const matrix = transform.match(/^matrix\((.+)\)$/);
+            if (matrix) {
+              const values = matrix[1].split(', ');
+              scale = parseFloat(values[0]);
+              translateX = parseFloat(values[4]);
+              translateY = parseFloat(values[5]);
+            }
+          }
+          
           // Get the position of this connection point
           const rect = e.target.getBoundingClientRect();
-          const pointX = rect.left + rect.width / 2;
-          const pointY = rect.top + rect.height / 2;
+          
+          // Calculate position in canvas space
+          const pointX = ((rect.left + rect.width / 2 - canvasRect.left) / scale) - (translateX / scale);
+          const pointY = ((rect.top + rect.height / 2 - canvasRect.top) / scale) - (translateY / scale);
+          
+          // Snap to grid
+          const snappedX = Math.round(pointX / GRID_SIZE) * GRID_SIZE;
+          const snappedY = Math.round(pointY / GRID_SIZE) * GRID_SIZE;
+          
+          console.log("Connection start at:", snappedX, snappedY);
           
           setConnectionStart({
             blockId,
             point: pointType,
-            x: pointX,
-            y: pointY
+            x: snappedX,
+            y: snappedY
           });
           
           setConnectionEnd({
-            x: pointX,
-            y: pointY
+            x: snappedX,
+            y: snappedY
           });
           
           // Handle both MouseEvent and TouchEvent
@@ -84,9 +117,40 @@ const Canvas = ({
     
     const handleConnectorMouseMove = (e: MouseEvent) => {
       if (isConnecting) {
+        // Get the canvas element
+        const canvasElement = document.querySelector('.canvas-background');
+        if (!canvasElement) return;
+        const canvasRect = canvasElement.getBoundingClientRect();
+        
+        // Get canvas transform
+        const canvasStyle = window.getComputedStyle(canvasElement);
+        const transform = canvasStyle.transform || canvasStyle.webkitTransform;
+        let scale = 1;
+        let translateX = 0;
+        let translateY = 0;
+        
+        // Extract scale and translation values from transform matrix
+        if (transform && transform !== 'none') {
+          const matrix = transform.match(/^matrix\((.+)\)$/);
+          if (matrix) {
+            const values = matrix[1].split(', ');
+            scale = parseFloat(values[0]);
+            translateX = parseFloat(values[4]);
+            translateY = parseFloat(values[5]);
+          }
+        }
+        
+        // Calculate mouse position in canvas space
+        const mouseX = ((e.clientX - canvasRect.left) / scale) - (translateX / scale);
+        const mouseY = ((e.clientY - canvasRect.top) / scale) - (translateY / scale);
+        
+        // Snap to grid
+        const snappedX = Math.round(mouseX / GRID_SIZE) * GRID_SIZE;
+        const snappedY = Math.round(mouseY / GRID_SIZE) * GRID_SIZE;
+        
         setConnectionEnd({
-          x: e.clientX,
-          y: e.clientY
+          x: snappedX,
+          y: snappedY
         });
       }
     };
@@ -216,18 +280,14 @@ const Canvas = ({
 
   // Grid snapping constants
   const GRID_SIZE = 20; // Size of grid in pixels
-  const SNAP_THRESHOLD = 10; // Distance in pixels to trigger snapping
+  // Always snap to grid, no threshold
   
   const snapToGrid = (position: { x: number; y: number }): { x: number; y: number } => {
-    // Calculate closest grid points
+    // Always snap to grid, more predictable behavior
     const snapX = Math.round(position.x / GRID_SIZE) * GRID_SIZE;
     const snapY = Math.round(position.y / GRID_SIZE) * GRID_SIZE;
     
-    // Only snap if within threshold
-    const snapPosX = Math.abs(position.x - snapX) < SNAP_THRESHOLD ? snapX : position.x;
-    const snapPosY = Math.abs(position.y - snapY) < SNAP_THRESHOLD ? snapY : position.y;
-    
-    return { x: snapPosX, y: snapPosY };
+    return { x: snapX, y: snapY };
   };
 
   const handleDragMove = (blockId: string, newPosition: { x: number; y: number }) => {
