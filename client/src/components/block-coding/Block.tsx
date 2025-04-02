@@ -42,13 +42,52 @@ const Block = ({
     }
   }, [block.params, config.params, onUpdateParams]);
 
+  // Adjustment for canvas scale and position
+  const adjustForCanvasTransform = (clientX: number, clientY: number) => {
+    // Get the current canvas element (could be passed as a prop or found via DOM)
+    const canvasElement = document.querySelector('.canvas-background');
+    
+    if (!canvasElement) return { x: clientX, y: clientY };
+    
+    // Get canvas transformation
+    const canvasStyle = window.getComputedStyle(canvasElement);
+    const transform = canvasStyle.transform || canvasStyle.webkitTransform;
+    
+    // Default values if we can't parse transform
+    let scaleValue = 1;
+    let translateX = 0;
+    let translateY = 0;
+    
+    // Extract scale and translation values from transform matrix
+    if (transform && transform !== 'none') {
+      // Transform matrix format: matrix(scaleX, 0, 0, scaleY, translateX, translateY)
+      const matrix = transform.match(/^matrix\((.+)\)$/);
+      if (matrix) {
+        const values = matrix[1].split(', ');
+        scaleValue = parseFloat(values[0]);
+        translateX = parseFloat(values[4]);
+        translateY = parseFloat(values[5]);
+      }
+    }
+    
+    // Adjust coordinates for canvas scale and position
+    const adjustedX = (clientX - translateX) / scaleValue;
+    const adjustedY = (clientY - translateY) / scaleValue;
+    
+    return { x: adjustedX, y: adjustedY };
+  };
+
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('.block-header')) {
+    const targetElement = e.target as HTMLElement;
+    
+    // Only initiate drag on header
+    if (targetElement.closest('.block-header')) {
       setIsDraggingLocal(true);
       onDragStart();
       
       const rect = blockRef.current?.getBoundingClientRect();
       if (rect) {
+        // Store the offset from the click point to the top-left corner of the block
         setDragOffset({
           x: e.clientX - rect.left,
           y: e.clientY - rect.top
@@ -56,13 +95,17 @@ const Block = ({
       }
       
       e.preventDefault();
+      e.stopPropagation();
     }
   };
 
   const handleMouseMove = (e: MouseEvent) => {
     if (isDraggingLocal && blockRef.current) {
+      // Calculate new position using adjusted coordinates
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
+      
+      // Calculate position in canvas space
       onDragMove({ x: newX, y: newY });
     }
   };
@@ -84,51 +127,77 @@ const Block = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDraggingLocal, handleMouseMove]);
+  }, [isDraggingLocal, dragOffset]);
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('.block-header')) {
+    const targetElement = e.target as HTMLElement;
+    
+    // Only initiate drag on header
+    if (targetElement.closest('.block-header')) {
       setIsDraggingLocal(true);
       onDragStart();
       
       const rect = blockRef.current?.getBoundingClientRect();
-      if (rect) {
+      if (rect && e.touches.length > 0) {
+        // Store the offset from the touch point to the top-left corner of the block
         setDragOffset({
           x: e.touches[0].clientX - rect.left,
           y: e.touches[0].clientY - rect.top
         });
       }
       
-      e.preventDefault();
+      // Prevent default to avoid scrolling while dragging
+      if (typeof e.preventDefault === 'function') {
+        e.preventDefault();
+      }
+      if (typeof e.stopPropagation === 'function') {
+        e.stopPropagation();
+      }
     }
   };
 
   const handleTouchMove = (e: TouchEvent) => {
-    if (isDraggingLocal && blockRef.current) {
-      const newX = e.touches[0].clientX - dragOffset.x;
-      const newY = e.touches[0].clientY - dragOffset.y;
+    if (isDraggingLocal && blockRef.current && e.touches.length > 0) {
+      // Calculate new position
+      const touch = e.touches[0];
+      const newX = touch.clientX - dragOffset.x;
+      const newY = touch.clientY - dragOffset.y;
+      
+      // Calculate position in canvas space
       onDragMove({ x: newX, y: newY });
+      
+      // Prevent scrolling
+      if (typeof e.preventDefault === 'function') {
+        e.preventDefault();
+      }
     }
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e: TouchEvent) => {
     if (isDraggingLocal) {
       setIsDraggingLocal(false);
       onDragEnd();
+      
+      // Prevent any default behavior
+      if (typeof e.preventDefault === 'function') {
+        e.preventDefault();
+      }
     }
   };
 
   useEffect(() => {
     if (isDraggingLocal) {
-      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
       window.addEventListener('touchend', handleTouchEnd);
+      window.addEventListener('touchcancel', handleTouchEnd);
     }
     
     return () => {
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [isDraggingLocal]);
+  }, [isDraggingLocal, dragOffset]);
 
   const renderParamInput = (param: any) => {
     switch (param.type) {

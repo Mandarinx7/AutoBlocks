@@ -214,8 +214,26 @@ const Canvas = ({
     setDraggingBlockId(blockId);
   };
 
+  // Grid snapping constants
+  const GRID_SIZE = 20; // Size of grid in pixels
+  const SNAP_THRESHOLD = 10; // Distance in pixels to trigger snapping
+  
+  const snapToGrid = (position: { x: number; y: number }): { x: number; y: number } => {
+    // Calculate closest grid points
+    const snapX = Math.round(position.x / GRID_SIZE) * GRID_SIZE;
+    const snapY = Math.round(position.y / GRID_SIZE) * GRID_SIZE;
+    
+    // Only snap if within threshold
+    const snapPosX = Math.abs(position.x - snapX) < SNAP_THRESHOLD ? snapX : position.x;
+    const snapPosY = Math.abs(position.y - snapY) < SNAP_THRESHOLD ? snapY : position.y;
+    
+    return { x: snapPosX, y: snapPosY };
+  };
+
   const handleDragMove = (blockId: string, newPosition: { x: number; y: number }) => {
-    onUpdateBlock(blockId, { position: newPosition });
+    // Apply grid snapping when dragging blocks
+    const snappedPosition = snapToGrid(newPosition);
+    onUpdateBlock(blockId, { position: snappedPosition });
   };
 
   const handleDragEnd = () => {
