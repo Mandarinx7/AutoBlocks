@@ -464,7 +464,8 @@ const Canvas = ({
             height: '10000px',
             backgroundColor: 'white',
             backgroundImage: `
-              radial-gradient(circle, rgba(0, 120, 212, 0.15) 1px, transparent 1px)
+              linear-gradient(to right, rgba(0, 120, 212, 0.1) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(0, 120, 212, 0.1) 1px, transparent 1px)
             `,
             backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
             backgroundPosition: `-${canvasPosition.x}px -${canvasPosition.y}px`
