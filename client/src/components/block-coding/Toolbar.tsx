@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Menu, Code, Download, Upload, Play } from "lucide-react";
+import { DownloadButton } from "./DownloadButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 

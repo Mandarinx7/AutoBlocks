@@ -1,8 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupDownloadRoute } from "./download";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup download route
+  setupDownloadRoute(app);
   // API endpoint to get user's flows
   app.get('/api/flows', async (req, res) => {
     try {
