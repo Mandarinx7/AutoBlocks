@@ -170,8 +170,8 @@ const Canvas = ({
     setIsPanning(false);
   };
 
-  // Drag and drop functionality for blocks
-  const handleDragStart = (blockId: string) => {
+  // This is the legacy drag start handler - will be removed
+  const handleBlockDragStart = (blockId: string) => {
     setDraggingBlockId(blockId);
   };
 
@@ -214,16 +214,47 @@ const Canvas = ({
     };
   };
 
-  // Modified drag move handler with snap-to-grid
-  const handleDragMoveWithSnap = (blockId: string, newPosition: { x: number, y: number }) => {
-    // Convert position from screen coordinates to canvas coordinates
-    const canvasPos = {
-      x: (newPosition.x - position.x) / scale,
-      y: (newPosition.y - position.y) / scale
+  // Tracking cursor position for precise dragging
+  const [cursorOffset, setCursorOffset] = useState<{ x: number, y: number } | null>(null);
+  
+  // Set initial cursor position when starting to drag a block
+  const handlePreciseDragStart = (blockId: string, cursorPos: { x: number, y: number }) => {
+    const block = flow.blocks.find(b => b.id === blockId);
+    if (block) {
+      // Calculate cursor offset relative to the block's position in canvas coordinates
+      const blockCanvasX = block.position.x;
+      const blockCanvasY = block.position.y;
+      
+      // Convert cursor position from screen to canvas coordinates
+      const cursorCanvasX = (cursorPos.x - position.x) / scale;
+      const cursorCanvasY = (cursorPos.y - position.y) / scale;
+      
+      // Store offset between cursor and block origin
+      setCursorOffset({
+        x: cursorCanvasX - blockCanvasX,
+        y: cursorCanvasY - blockCanvasY
+      });
+    }
+    
+    setDraggingBlockId(blockId);
+  };
+  
+  // Modified drag move handler with snap-to-grid and cursor offset adjustment
+  const handleDragMoveWithSnap = (blockId: string, newCursorPosition: { x: number, y: number }) => {
+    if (!cursorOffset) return;
+    
+    // Convert cursor position from screen to canvas coordinates
+    const cursorCanvasX = (newCursorPosition.x - position.x) / scale;
+    const cursorCanvasY = (newCursorPosition.y - position.y) / scale;
+    
+    // Calculate new block position by subtracting the original cursor offset
+    const newBlockPosition = {
+      x: cursorCanvasX - cursorOffset.x,
+      y: cursorCanvasY - cursorOffset.y
     };
     
     // Snap to grid after converting to canvas coordinates
-    const snappedPosition = snapToGrid(canvasPos.x, canvasPos.y);
+    const snappedPosition = snapToGrid(newBlockPosition.x, newBlockPosition.y);
     
     // Update block with snapped canvas coordinates
     onUpdateBlock(blockId, { position: snappedPosition });
@@ -320,7 +351,7 @@ const Canvas = ({
               key={block.id}
               block={block}
               config={blockConfig}
-              onDragStart={() => handleDragStart(block.id)}
+              onDragStart={(cursorPos) => handlePreciseDragStart(block.id, cursorPos)}
               onDragMove={(newPos) => handleDragMoveWithSnap(block.id, newPos)}
               onDragEnd={handleDragEnd}
               onUpdateParams={(key, value) => onUpdateBlockParams(block.id, key, value)}

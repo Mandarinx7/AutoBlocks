@@ -16,7 +16,7 @@ import { BlockConfig } from "@/lib/block-coding/blockTypes";
 interface BlockProps {
   block: BlockType;
   config: BlockConfig;
-  onDragStart: () => void;
+  onDragStart: (cursorPos: { x: number; y: number }) => void;
   onDragMove: (position: { x: number; y: number }) => void;
   onDragEnd: () => void;
   onUpdateParams: (key: string, value: any) => void;
@@ -54,7 +54,8 @@ const Block = ({
     // Allow dragging from anywhere in the block except buttons
     if (!(e.target as HTMLElement).closest('button')) {
       setIsDraggingLocal(true);
-      onDragStart();
+      // Pass cursor position to parent component
+      onDragStart({ x: e.clientX, y: e.clientY });
       
       const rect = blockRef.current?.getBoundingClientRect();
       if (rect) {
@@ -108,7 +109,11 @@ const Block = ({
     // Allow dragging from anywhere in the block except buttons
     if (!(e.target as HTMLElement).closest('button')) {
       setIsDraggingLocal(true);
-      onDragStart();
+      // Pass touch position to parent component
+      onDragStart({ 
+        x: e.touches[0].clientX, 
+        y: e.touches[0].clientY 
+      });
       
       const rect = blockRef.current?.getBoundingClientRect();
       if (rect) {
