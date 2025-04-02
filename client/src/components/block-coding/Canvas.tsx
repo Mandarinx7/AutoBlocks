@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
-import Block from "./Block";
-import { Flow, Block as BlockType, Edge } from "@/pages/BlockCoding";
+import { useState, useRef, useEffect } from "react";
 import { getBlockConfig } from "@/lib/block-coding/blockTypes";
+import Block from "@/components/block-coding/Block";
+import { Block as BlockType, Edge, Flow } from "@/pages/BlockCoding";
 
 interface CanvasProps {
   flow: Flow;
@@ -13,48 +13,170 @@ interface CanvasProps {
 }
 
 const Canvas = ({ 
-  flow, 
-  onUpdateBlock, 
+  flow,
+  onUpdateBlock,
   onUpdateBlockParams,
   onAddEdge,
   onRemoveEdge,
   onRemoveBlock
 }: CanvasProps) => {
-  const canvasRef = useRef<HTMLDivElement>(null);
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+  const [canvasPosition, setCanvasPosition] = useState({ x: 0, y: 0 });
+  const canvasRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
-  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  
+  // Connection dragging state
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionStart, setConnectionStart] = useState<{ 
+    blockId: string, 
+    point: string, 
+    x: number, 
+    y: number 
+  } | null>(null);
+  const [connectionEnd, setConnectionEnd] = useState<{ x: number, y: number }>({ x: 0, y: 0 });
 
-  // Handle mouse events for panning
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.target === canvasRef.current || (e.target as HTMLElement).classList.contains('lf-canvas')) {
-      setIsPanning(true);
-      setStartPos({ x: e.clientX - position.x, y: e.clientY - position.y });
+  useEffect(() => {
+    // Get initial canvas position
+    if (canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      setCanvasPosition({ x: rect.left, y: rect.top });
     }
-  };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isPanning) {
-      const newPos = { 
-        x: e.clientX - startPos.x, 
-        y: e.clientY - startPos.y 
-      };
-      setPosition(newPos);
-    }
-  };
+    // Add event listeners for connection creation
+    const handleConnectorMouseDown = (e: MouseEvent) => {
+      if (!(e.target instanceof Element)) return;
+      
+      // Check if clicked on a connection point
+      if (e.target.classList.contains('connection-point')) {
+        const blockId = e.target.getAttribute('data-block-id');
+        const pointType = e.target.getAttribute('data-connection-point');
+        
+        if (blockId && pointType) {
+          setIsConnecting(true);
+          
+          // Get the position of this connection point
+          const rect = e.target.getBoundingClientRect();
+          const pointX = rect.left + rect.width / 2;
+          const pointY = rect.top + rect.height / 2;
+          
+          setConnectionStart({
+            blockId,
+            point: pointType,
+            x: pointX,
+            y: pointY
+          });
+          
+          setConnectionEnd({
+            x: pointX,
+            y: pointY
+          });
+          
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    };
+    
+    const handleConnectorMouseMove = (e: MouseEvent) => {
+      if (isConnecting) {
+        setConnectionEnd({
+          x: e.clientX,
+          y: e.clientY
+        });
+      }
+    };
+    
+    const handleConnectorMouseUp = (e: MouseEvent) => {
+      if (isConnecting && connectionStart) {
+        if (!(e.target instanceof Element)) {
+          setIsConnecting(false);
+          setConnectionStart(null);
+          return;
+        }
+        
+        // Check if dropped on a connection point
+        if (e.target.classList.contains('connection-point')) {
+          const targetBlockId = e.target.getAttribute('data-block-id');
+          const targetPointType = e.target.getAttribute('data-connection-point');
+          
+          if (targetBlockId && targetPointType && targetBlockId !== connectionStart.blockId) {
+            // Determine source and target based on connection points
+            let sourceBlockId, targetBlock;
+            
+            if (connectionStart.point === 'output' && targetPointType === 'input') {
+              // Valid connection: output -> input
+              sourceBlockId = connectionStart.blockId;
+              targetBlock = targetBlockId;
+            } else if (connectionStart.point === 'input' && targetPointType === 'output') {
+              // Reverse connection: input <- output 
+              sourceBlockId = targetBlockId;
+              targetBlock = connectionStart.blockId;
+            } else {
+              // Invalid connection (output -> output or input -> input)
+              setIsConnecting(false);
+              setConnectionStart(null);
+              return;
+            }
+            
+            // Create edge with unique ID
+            const edge: Edge = {
+              id: `edge-${Date.now()}`,
+              source: sourceBlockId,
+              sourceHandle: 'output',
+              target: targetBlock,
+              targetHandle: 'input'
+            };
+            
+            onAddEdge(edge);
+          }
+        }
+        
+        setIsConnecting(false);
+        setConnectionStart(null);
+      }
+    };
+    
+    // Add canvas-level event listeners
+    document.addEventListener('mousedown', handleConnectorMouseDown);
+    document.addEventListener('mousemove', handleConnectorMouseMove);
+    document.addEventListener('mouseup', handleConnectorMouseUp);
+    
+    // For mobile
+    document.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      handleConnectorMouseDown(touch as unknown as MouseEvent);
+    });
+    
+    document.addEventListener('touchmove', (e) => {
+      const touch = e.touches[0];
+      handleConnectorMouseMove(touch as unknown as MouseEvent);
+    });
+    
+    document.addEventListener('touchend', (e) => {
+      if (e.changedTouches.length > 0) {
+        const touch = e.changedTouches[0];
+        handleConnectorMouseUp(touch as unknown as MouseEvent);
+      } else {
+        setIsConnecting(false);
+        setConnectionStart(null);
+      }
+    });
+    
+    return () => {
+      document.removeEventListener('mousedown', handleConnectorMouseDown);
+      document.removeEventListener('mousemove', handleConnectorMouseMove);
+      document.removeEventListener('mouseup', handleConnectorMouseUp);
+      document.removeEventListener('touchstart', handleConnectorMouseDown as any);
+      document.removeEventListener('touchmove', handleConnectorMouseMove as any);
+      document.removeEventListener('touchend', handleConnectorMouseUp as any);
+    };
+  }, [isConnecting, connectionStart, onAddEdge]);
 
-  const handleMouseUp = () => {
-    setIsPanning(false);
-  };
-
-  // Drag and drop functionality for blocks
   const handleDragStart = (blockId: string) => {
     setDraggingBlockId(blockId);
   };
 
-  const handleDragMove = (blockId: string, newPosition: { x: number, y: number }) => {
+  const handleDragMove = (blockId: string, newPosition: { x: number; y: number }) => {
     onUpdateBlock(blockId, { position: newPosition });
   };
 
@@ -62,91 +184,138 @@ const Canvas = ({
     setDraggingBlockId(null);
   };
 
-  // Handle zooming
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    const newScale = Math.max(0.5, Math.min(2, scale + delta));
-    setScale(newScale);
+  // Handle canvas pan and zoom
+  const [isPanning, setIsPanning] = useState(false);
+  const [startPanPoint, setStartPanPoint] = useState({ x: 0, y: 0 });
+  const [startCanvasPosition, setStartCanvasPosition] = useState({ x: 0, y: 0 });
+
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only pan if clicked directly on the canvas, not on a block
+    if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('canvas-background')) {
+      setIsPanning(true);
+      setStartPanPoint({ x: e.clientX, y: e.clientY });
+      setStartCanvasPosition({ ...canvasPosition });
+      e.preventDefault();
+    }
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isPanning) {
+      const dx = e.clientX - startPanPoint.x;
+      const dy = e.clientY - startPanPoint.y;
+      
+      setCanvasPosition({
+        x: startCanvasPosition.x + dx,
+        y: startCanvasPosition.y + dy
+      });
+    }
+  };
+
+  const handleCanvasMouseUp = () => {
+    setIsPanning(false);
   };
 
   return (
-    <div 
-      ref={canvasRef}
-      className="flex-1 relative bg-gray-100 overflow-hidden"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onWheel={handleWheel}
-    >
+    <div className="relative flex-1 overflow-hidden bg-gray-50 touch-none">
       <div 
-        className="absolute inset-0 z-10"
-        style={{ 
-          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-          transformOrigin: '0 0'
-        }}
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full overflow-hidden canvas-background"
+        onMouseDown={handleCanvasMouseDown}
+        onMouseMove={handleCanvasMouseMove}
+        onMouseUp={handleCanvasMouseUp}
+        onMouseLeave={handleCanvasMouseUp}
       >
-        {/* SVG for connectors */}
-        <svg className="absolute inset-0 w-full h-full z-0">
-          {flow.edges.map((edge) => {
-            const sourceBlock = flow.blocks.find(b => b.id === edge.source);
-            const targetBlock = flow.blocks.find(b => b.id === edge.target);
+        <div 
+          className="absolute"
+          style={{
+            transform: `translate(${canvasPosition.x}px, ${canvasPosition.y}px) scale(${scale})`,
+            transformOrigin: '0 0',
+            width: '5000px',
+            height: '5000px'
+          }}
+        >
+          {/* SVG for connectors */}
+          <svg className="absolute inset-0 w-full h-full z-0">
+            {/* Existing connections */}
+            {flow.edges.map((edge) => {
+              const sourceBlock = flow.blocks.find(b => b.id === edge.source);
+              const targetBlock = flow.blocks.find(b => b.id === edge.target);
+              
+              if (!sourceBlock || !targetBlock) return null;
+              
+              // Calculate connector points
+              const x1 = sourceBlock.position.x + 120; // Assuming block width is 240px
+              const y1 = sourceBlock.position.y + 70;  // Approximate output point
+              const x2 = targetBlock.position.x;
+              const y2 = targetBlock.position.y + 70;  // Approximate input point
+              
+              // Calculate control points for curved connector
+              const deltaX = Math.abs(x2 - x1) * 0.5;
+              const path = `M${x1},${y1} C${x1+deltaX},${y1} ${x2-deltaX},${y2} ${x2},${y2}`;
+              
+              return (
+                <g key={edge.id}>
+                  <path
+                    d={path}
+                    className="stroke-purple-500 stroke-2 fill-none"
+                    markerEnd="url(#arrowhead)"
+                  />
+                  {/* Wider invisible path for better touch target */}
+                  <path
+                    d={path}
+                    className="stroke-transparent stroke-[10px] fill-none cursor-pointer"
+                    onClick={() => onRemoveEdge(edge.id)} 
+                  />
+                  <title>Click to remove connection</title>
+                </g>
+              );
+            })}
             
-            if (!sourceBlock || !targetBlock) return null;
-            
-            // Calculate connector points
-            const x1 = sourceBlock.position.x + 120; // Assuming block width is 240px
-            const y1 = sourceBlock.position.y + 70;  // Approximate output point
-            const x2 = targetBlock.position.x;
-            const y2 = targetBlock.position.y + 70;  // Approximate input point
-            
-            // Calculate control points for curved connector
-            const deltaX = Math.abs(x2 - x1) * 0.5;
-            const path = `M${x1},${y1} C${x1+deltaX},${y1} ${x2-deltaX},${y2} ${x2},${y2}`;
-            
-            return (
+            {/* Connection being created */}
+            {isConnecting && connectionStart && (
               <path
-                key={edge.id}
-                d={path}
-                className="stroke-purple-500 stroke-2 fill-none"
-                markerEnd="url(#arrowhead)"
+                d={`M${connectionStart.x},${connectionStart.y} 
+                    C${connectionStart.x + 50},${connectionStart.y} 
+                    ${connectionEnd.x - 50},${connectionEnd.y} 
+                    ${connectionEnd.x},${connectionEnd.y}`}
+                className="stroke-purple-500 stroke-2 fill-none stroke-dashed"
+                strokeDasharray="5,5"
+              />
+            )}
+            
+            {/* Arrow marker definition */}
+            <defs>
+              <marker
+                id="arrowhead"
+                markerWidth="10"
+                markerHeight="7"
+                refX="9"
+                refY="3.5"
+                orient="auto"
+              >
+                <polygon points="0 0, 10 3.5, 0 7" className="fill-purple-500" />
+              </marker>
+            </defs>
+          </svg>
+          
+          {/* Render blocks */}
+          {flow.blocks.map((block) => {
+            const blockConfig = getBlockConfig(block.type);
+            return (
+              <Block
+                key={block.id}
+                block={block}
+                config={blockConfig}
+                onDragStart={() => handleDragStart(block.id)}
+                onDragMove={(newPos) => handleDragMove(block.id, newPos)}
+                onDragEnd={handleDragEnd}
+                onUpdateParams={(key, value) => onUpdateBlockParams(block.id, key, value)}
+                onRemove={() => onRemoveBlock(block.id)}
+                isDragging={draggingBlockId === block.id}
               />
             );
           })}
-          
-          {/* Arrow marker definition */}
-          <defs>
-            <marker
-              id="arrowhead"
-              markerWidth="10"
-              markerHeight="7"
-              refX="9"
-              refY="3.5"
-              orient="auto"
-            >
-              <polygon points="0 0, 10 3.5, 0 7" className="fill-purple-500" />
-            </marker>
-          </defs>
-        </svg>
-        
-        {/* Render blocks */}
-        {flow.blocks.map((block) => {
-          const blockConfig = getBlockConfig(block.type);
-          return (
-            <Block
-              key={block.id}
-              block={block}
-              config={blockConfig}
-              onDragStart={() => handleDragStart(block.id)}
-              onDragMove={(newPos) => handleDragMove(block.id, newPos)}
-              onDragEnd={handleDragEnd}
-              onUpdateParams={(key, value) => onUpdateBlockParams(block.id, key, value)}
-              onRemove={() => onRemoveBlock(block.id)}
-              isDragging={draggingBlockId === block.id}
-            />
-          );
-        })}
+        </div>
       </div>
     </div>
   );

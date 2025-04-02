@@ -228,15 +228,25 @@ const Block = ({
       
       <div className="flex items-center justify-between p-2 bg-gray-50 rounded-b-lg">
         <div 
-          className={`connection-point w-3 h-3 rounded-full ${config.connectionPointColor} opacity-70`}
+          className={`connection-point w-4 h-4 rounded-full ${config.connectionPointColor} opacity-70 hover:opacity-100 hover:scale-125 transition-all cursor-pointer flex items-center justify-center`}
           data-connection-point="input"
           data-block-id={block.id}
-        />
+          title="Drag from another block to connect here"
+        >
+          {block.connections.inputs.length > 0 && (
+            <div className="w-2 h-2 bg-white rounded-full" />
+          )}
+        </div>
         <div 
-          className={`connection-point w-3 h-3 rounded-full ${config.connectionPointColor} opacity-70`}
+          className={`connection-point w-4 h-4 rounded-full ${config.connectionPointColor} opacity-70 hover:opacity-100 hover:scale-125 transition-all cursor-pointer flex items-center justify-center`}
           data-connection-point="output"
           data-block-id={block.id}
-        />
+          title="Drag from here to another block to connect"
+        >
+          {block.connections.outputs.length > 0 && (
+            <div className="w-2 h-2 bg-white rounded-full" />
+          )}
+        </div>
       </div>
     </div>
   );

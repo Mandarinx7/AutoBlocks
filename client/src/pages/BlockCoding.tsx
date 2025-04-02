@@ -160,20 +160,152 @@ const BlockCoding = () => {
   };
 
   const handleAddEdge = (edge: Edge) => {
+    // Check if there's already a connection between these blocks
+    const existingEdge = currentFlow.edges.find(
+      e => e.source === edge.source && e.target === edge.target
+    );
+    
+    if (existingEdge) {
+      toast({
+        title: "Connection exists",
+        description: "These blocks are already connected.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate that this won't create a circular reference
+    if (wouldCreateCircularReference(edge, currentFlow.edges)) {
+      toast({
+        title: "Invalid connection",
+        description: "This would create a circular reference.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Add the new edge
     setCurrentFlow(prev => ({
       ...prev,
       edges: [...prev.edges, edge]
     }));
+    
+    // Update the connections in the blocks
+    setCurrentFlow(prev => ({
+      ...prev,
+      blocks: prev.blocks.map(block => {
+        if (block.id === edge.source) {
+          return {
+            ...block,
+            connections: {
+              ...block.connections,
+              outputs: [...block.connections.outputs, edge.target]
+            }
+          };
+        } else if (block.id === edge.target) {
+          return {
+            ...block,
+            connections: {
+              ...block.connections,
+              inputs: [...block.connections.inputs, edge.source]
+            }
+          };
+        }
+        return block;
+      })
+    }));
+  };
+  
+  // Check if adding a new edge would create a circular reference
+  const wouldCreateCircularReference = (newEdge: Edge, existingEdges: Edge[]): boolean => {
+    const edges = [...existingEdges, newEdge];
+    const graph = buildGraph(edges);
+    
+    // Perform DFS to detect cycles
+    const visited = new Set<string>();
+    const recStack = new Set<string>();
+    
+    const hasCycle = (node: string): boolean => {
+      if (!visited.has(node)) {
+        visited.add(node);
+        recStack.add(node);
+        
+        const neighbors = graph.get(node) || [];
+        for (const neighbor of neighbors) {
+          if (!visited.has(neighbor) && hasCycle(neighbor)) {
+            return true;
+          } else if (recStack.has(neighbor)) {
+            return true;
+          }
+        }
+      }
+      
+      recStack.delete(node);
+      return false;
+    };
+    
+    return hasCycle(newEdge.source);
+  };
+  
+  // Build adjacency list representation of the graph
+  const buildGraph = (edges: Edge[]): Map<string, string[]> => {
+    const graph = new Map<string, string[]>();
+    
+    for (const edge of edges) {
+      if (!graph.has(edge.source)) {
+        graph.set(edge.source, []);
+      }
+      graph.get(edge.source)!.push(edge.target);
+    }
+    
+    return graph;
   };
 
   const handleRemoveEdge = (edgeId: string) => {
+    // First, get the edge that will be removed
+    const edgeToRemove = currentFlow.edges.find(edge => edge.id === edgeId);
+    
+    if (!edgeToRemove) return;
+    
+    // Remove the edge
     setCurrentFlow(prev => ({
       ...prev,
       edges: prev.edges.filter(edge => edge.id !== edgeId)
     }));
+    
+    // Update the connections in the blocks
+    setCurrentFlow(prev => ({
+      ...prev,
+      blocks: prev.blocks.map(block => {
+        if (block.id === edgeToRemove.source) {
+          return {
+            ...block,
+            connections: {
+              ...block.connections,
+              outputs: block.connections.outputs.filter(id => id !== edgeToRemove.target)
+            }
+          };
+        } else if (block.id === edgeToRemove.target) {
+          return {
+            ...block,
+            connections: {
+              ...block.connections,
+              inputs: block.connections.inputs.filter(id => id !== edgeToRemove.source)
+            }
+          };
+        }
+        return block;
+      })
+    }));
   };
 
   const handleRemoveBlock = (blockId: string) => {
+    // Get all edges connected to this block
+    const connectedEdges = currentFlow.edges.filter(
+      edge => edge.source === blockId || edge.target === blockId
+    );
+    
+    // Remove the block and its connected edges
     setCurrentFlow(prev => ({
       ...prev,
       blocks: prev.blocks.filter(block => block.id !== blockId),
@@ -181,6 +313,41 @@ const BlockCoding = () => {
         edge => edge.source !== blockId && edge.target !== blockId
       )
     }));
+    
+    // Update connections in other blocks that were connected to this block
+    setCurrentFlow(prev => ({
+      ...prev,
+      blocks: prev.blocks.map(block => {
+        // Remove this block from other blocks' inputs
+        if (block.connections.inputs.includes(blockId)) {
+          return {
+            ...block,
+            connections: {
+              ...block.connections,
+              inputs: block.connections.inputs.filter(id => id !== blockId)
+            }
+          };
+        }
+        
+        // Remove this block from other blocks' outputs
+        if (block.connections.outputs.includes(blockId)) {
+          return {
+            ...block,
+            connections: {
+              ...block.connections,
+              outputs: block.connections.outputs.filter(id => id !== blockId)
+            }
+          };
+        }
+        
+        return block;
+      })
+    }));
+    
+    toast({
+      title: "Block removed",
+      description: `Block removed with ${connectedEdges.length} connection(s).`
+    });
   };
 
   const handleNewFlow = () => {
