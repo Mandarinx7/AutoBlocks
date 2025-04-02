@@ -1,6 +1,4 @@
-import { useRef, useEffect, useState } from "react";
-import LogicFlow from "@logicflow/core";
-import { DndPanel, SelectionSelect, MiniMap } from "@logicflow/extension";
+import { useRef, useState } from "react";
 import Block from "./Block";
 import { Flow, Block as BlockType, Edge } from "@/pages/BlockCoding";
 import { getBlockConfig } from "@/lib/block-coding/blockTypes";
@@ -23,46 +21,11 @@ const Canvas = ({
   onRemoveBlock
 }: CanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
-  const [logicFlow, setLogicFlow] = useState<LogicFlow | null>(null);
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
-
-  // Initialize LogicFlow
-  useEffect(() => {
-    if (canvasRef.current && !logicFlow) {
-      // Ensure DOM is fully ready by using a small timeout
-      setTimeout(() => {
-        // Import LogicFlow dynamically to avoid SSR issues
-        import("@logicflow/core").then(({ default: LogicFlow }) => {
-          import("@logicflow/extension").then(({ DndPanel, SelectionSelect, MiniMap }) => {
-            if (canvasRef.current) {
-              const lf = new LogicFlow({
-                container: canvasRef.current,
-                grid: true,
-                plugins: [DndPanel, SelectionSelect, MiniMap],
-                width: canvasRef.current.clientWidth,
-                height: canvasRef.current.clientHeight
-              });
-              
-              // Register custom nodes for blocks
-              // This is just a placeholder - we'll render React components on top
-              lf.render({});
-              setLogicFlow(lf);
-            }
-          });
-        });
-      }, 100);
-    }
-    
-    return () => {
-      if (logicFlow) {
-        logicFlow.destroy();
-      }
-    };
-  }, []);
 
   // Handle mouse events for panning
   const handleMouseDown = (e: React.MouseEvent) => {
