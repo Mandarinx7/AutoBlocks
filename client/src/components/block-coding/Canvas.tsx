@@ -71,8 +71,13 @@ const Canvas = ({
             y: pointY
           });
           
-          e.preventDefault();
-          e.stopPropagation();
+          // Handle both MouseEvent and TouchEvent
+          if (typeof e.preventDefault === 'function') {
+            e.preventDefault();
+          }
+          if (typeof e.stopPropagation === 'function') {
+            e.stopPropagation();
+          }
         }
       }
     };
@@ -142,35 +147,68 @@ const Canvas = ({
     document.addEventListener('mouseup', handleConnectorMouseUp);
     
     // For mobile
-    document.addEventListener('touchstart', (e) => {
-      const touch = e.touches[0];
-      handleConnectorMouseDown(touch as unknown as MouseEvent);
-    });
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        // Create a MouseEvent-like object from touch
+        const mouseEventLike = {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          target: touch.target,
+          preventDefault: () => {
+            if (typeof e.preventDefault === 'function') {
+              e.preventDefault();
+            }
+          },
+          stopPropagation: () => {
+            if (typeof e.stopPropagation === 'function') {
+              e.stopPropagation();
+            }
+          }
+        };
+        handleConnectorMouseDown(mouseEventLike as unknown as MouseEvent);
+      }
+    };
     
-    document.addEventListener('touchmove', (e) => {
-      const touch = e.touches[0];
-      handleConnectorMouseMove(touch as unknown as MouseEvent);
-    });
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        const mouseEventLike = {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        };
+        handleConnectorMouseMove(mouseEventLike as unknown as MouseEvent);
+      }
+    };
     
-    document.addEventListener('touchend', (e) => {
+    const handleTouchEnd = (e: TouchEvent) => {
       if (e.changedTouches.length > 0) {
         const touch = e.changedTouches[0];
-        handleConnectorMouseUp(touch as unknown as MouseEvent);
+        const mouseEventLike = {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          target: touch.target
+        };
+        handleConnectorMouseUp(mouseEventLike as unknown as MouseEvent);
       } else {
         setIsConnecting(false);
         setConnectionStart(null);
       }
-    });
+    };
+    
+    document.addEventListener('touchstart', handleTouchStart);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchEnd);
     
     return () => {
       document.removeEventListener('mousedown', handleConnectorMouseDown);
       document.removeEventListener('mousemove', handleConnectorMouseMove);
       document.removeEventListener('mouseup', handleConnectorMouseUp);
-      document.removeEventListener('touchstart', handleConnectorMouseDown as any);
-      document.removeEventListener('touchmove', handleConnectorMouseMove as any);
-      document.removeEventListener('touchend', handleConnectorMouseUp as any);
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isConnecting, connectionStart, onAddEdge]);
+  }, [isConnecting, connectionStart, onAddEdge, canvasRef]);
 
   const handleDragStart = (blockId: string) => {
     setDraggingBlockId(blockId);
