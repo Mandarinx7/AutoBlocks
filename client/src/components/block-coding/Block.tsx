@@ -51,8 +51,10 @@ const Block = ({
   }, [block.params, config.params, onUpdateParams]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Allow dragging from anywhere in the block except buttons
-    if (!(e.target as HTMLElement).closest('button')) {
+    // Allow dragging from anywhere in the block except buttons, inputs and selects
+    if (!(e.target as HTMLElement).closest('button') && 
+        !(e.target as HTMLElement).closest('input') && 
+        !(e.target as HTMLElement).closest('select')) {
       setIsDraggingLocal(true);
       // Pass cursor position to parent component
       onDragStart({ x: e.clientX, y: e.clientY });
@@ -106,8 +108,10 @@ const Block = ({
   }, [isDraggingLocal, handleMouseMove]);
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    // Allow dragging from anywhere in the block except buttons
-    if (!(e.target as HTMLElement).closest('button')) {
+    // Allow dragging from anywhere in the block except buttons, inputs and selects
+    if (!(e.target as HTMLElement).closest('button') && 
+        !(e.target as HTMLElement).closest('input') && 
+        !(e.target as HTMLElement).closest('select')) {
       setIsDraggingLocal(true);
       // Pass touch position to parent component
       onDragStart({ 
@@ -156,7 +160,7 @@ const Block = ({
 
   useEffect(() => {
     if (isDraggingLocal) {
-      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
       window.addEventListener('touchend', handleTouchEnd);
     }
     
@@ -164,7 +168,7 @@ const Block = ({
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isDraggingLocal]);
+  }, [isDraggingLocal, handleTouchMove, handleTouchEnd]);
 
   const renderParamInput = (param: any) => {
     switch (param.type) {
