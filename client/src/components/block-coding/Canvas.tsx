@@ -33,21 +33,28 @@ const Canvas = ({
   // Initialize LogicFlow
   useEffect(() => {
     if (canvasRef.current && !logicFlow) {
-      // Import LogicFlow dynamically to avoid SSR issues
-      import("@logicflow/core").then(({ default: LogicFlow }) => {
-        import("@logicflow/extension").then(({ DndPanel, SelectionSelect, MiniMap }) => {
-          const lf = new LogicFlow({
-            container: canvasRef.current!,
-            grid: true,
-            plugins: [DndPanel, SelectionSelect, MiniMap],
+      // Ensure DOM is fully ready by using a small timeout
+      setTimeout(() => {
+        // Import LogicFlow dynamically to avoid SSR issues
+        import("@logicflow/core").then(({ default: LogicFlow }) => {
+          import("@logicflow/extension").then(({ DndPanel, SelectionSelect, MiniMap }) => {
+            if (canvasRef.current) {
+              const lf = new LogicFlow({
+                container: canvasRef.current,
+                grid: true,
+                plugins: [DndPanel, SelectionSelect, MiniMap],
+                width: canvasRef.current.clientWidth,
+                height: canvasRef.current.clientHeight
+              });
+              
+              // Register custom nodes for blocks
+              // This is just a placeholder - we'll render React components on top
+              lf.render({});
+              setLogicFlow(lf);
+            }
           });
-          
-          // Register custom nodes for blocks
-          // This is just a placeholder - we'll render React components on top
-          lf.render({});
-          setLogicFlow(lf);
         });
-      });
+      }, 100);
     }
     
     return () => {
