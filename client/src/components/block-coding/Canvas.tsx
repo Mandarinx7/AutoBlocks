@@ -70,16 +70,39 @@ const Canvas = ({
     setScale(newScale);
   };
 
+  // Function to snap position to grid
+  const snapToGrid = (x: number, y: number, gridSize: number = 20) => {
+    return {
+      x: Math.round(x / gridSize) * gridSize,
+      y: Math.round(y / gridSize) * gridSize
+    };
+  };
+
+  // Modified drag move handler with snap-to-grid
+  const handleDragMoveWithSnap = (blockId: string, newPosition: { x: number, y: number }) => {
+    const snappedPosition = snapToGrid(newPosition.x, newPosition.y);
+    onUpdateBlock(blockId, { position: snappedPosition });
+  };
+
   return (
     <div 
       ref={canvasRef}
-      className="flex-1 relative bg-gray-100 overflow-hidden"
+      className="flex-1 relative bg-gray-50 overflow-hidden"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
     >
+      {/* Grid background */}
+      <div className="absolute inset-0" 
+        style={{
+          backgroundSize: `${20 * scale}px ${20 * scale}px`,
+          backgroundImage: `radial-gradient(circle, #ddd 1px, transparent 1px)`,
+          backgroundPosition: `${position.x % (20 * scale)}px ${position.y % (20 * scale)}px`,
+        }}
+      />
+      
       <div 
         className="absolute inset-0 z-10"
         style={{ 
@@ -139,7 +162,7 @@ const Canvas = ({
               block={block}
               config={blockConfig}
               onDragStart={() => handleDragStart(block.id)}
-              onDragMove={(newPos) => handleDragMove(block.id, newPos)}
+              onDragMove={(newPos) => handleDragMoveWithSnap(block.id, newPos)}
               onDragEnd={handleDragEnd}
               onUpdateParams={(key, value) => onUpdateBlockParams(block.id, key, value)}
               onRemove={() => onRemoveBlock(block.id)}
