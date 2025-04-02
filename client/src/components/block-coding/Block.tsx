@@ -58,6 +58,7 @@ const Block = ({
       
       const rect = blockRef.current?.getBoundingClientRect();
       if (rect) {
+        // Capture the offset within the block for precise positioning
         setDragOffset({
           x: e.clientX - rect.left,
           y: e.clientY - rect.top
@@ -72,9 +73,14 @@ const Block = ({
 
   const handleMouseMove = (e: MouseEvent) => {
     if (isDraggingLocal && blockRef.current) {
+      // Calculate absolute position based on mouse coordinates
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
-      onDragMove({ x: newX, y: newY });
+      
+      // Using requestAnimationFrame for smoother movement
+      requestAnimationFrame(() => {
+        onDragMove({ x: newX, y: newY });
+      });
     }
   };
 
@@ -105,6 +111,7 @@ const Block = ({
       
       const rect = blockRef.current?.getBoundingClientRect();
       if (rect) {
+        // Capture the exact touch point on the block for precise positioning
         setDragOffset({
           x: e.touches[0].clientX - rect.left,
           y: e.touches[0].clientY - rect.top
@@ -119,9 +126,17 @@ const Block = ({
 
   const handleTouchMove = (e: TouchEvent) => {
     if (isDraggingLocal && blockRef.current) {
+      // Calculate absolute position based on touch coordinates
       const newX = e.touches[0].clientX - dragOffset.x;
       const newY = e.touches[0].clientY - dragOffset.y;
-      onDragMove({ x: newX, y: newY });
+      
+      // Using requestAnimationFrame for smoother movement
+      requestAnimationFrame(() => {
+        onDragMove({ x: newX, y: newY });
+      });
+      
+      // Prevent default to avoid unwanted scrolling
+      e.preventDefault();
     }
   };
 
