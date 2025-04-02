@@ -15,7 +15,7 @@ interface CanvasProps {
 // Constants for canvas and grid
 const GRID_SIZE = 20;
 const MIN_ZOOM = 0.3;
-const MAX_ZOOM = 3;
+const MAX_ZOOM = 1.0; // Maximum zoom limited to 100% as requested
 const DEFAULT_CANVAS_SIZE = 1000; // px - Smaller for mobile screens
 const BLOCK_WIDTH = 200; // Width in pixels (10 * GRID_SIZE for grid alignment)
 const BLOCK_HEIGHT = 100; // Approximate height in pixels for connection point calculation

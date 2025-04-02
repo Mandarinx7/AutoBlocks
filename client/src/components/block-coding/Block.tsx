@@ -64,6 +64,8 @@ const Block = ({
         });
       }
       
+      // Stop event propagation to prevent canvas panning while dragging blocks
+      e.stopPropagation();
       e.preventDefault();
     }
   };
@@ -109,6 +111,8 @@ const Block = ({
         });
       }
       
+      // Stop event propagation to prevent canvas panning while dragging blocks
+      e.stopPropagation();
       e.preventDefault();
     }
   };
