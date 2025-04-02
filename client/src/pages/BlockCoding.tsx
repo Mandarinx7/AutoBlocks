@@ -390,6 +390,41 @@ const BlockCoding = () => {
           onRemoveBlock={handleRemoveBlock}
         />
         
+        {/* Bottom Navigation/Toolbar */}
+        <div className="fixed bottom-0 inset-x-0 bg-gray-50 shadow-lg py-3 flex justify-center items-center z-20">
+          <div className="flex space-x-4 items-center">
+            <button className="rounded-full bg-purple-100 p-3 flex items-center justify-center">
+              <span className="text-purple-900 text-xl">⚙️</span>
+            </button>
+            
+            <div className="bg-gray-200 rounded-full py-1 px-4 flex space-x-6">
+              <button className="p-2 flex items-center justify-center">
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="18" height="14" x="3" y="5" rx="2" strokeWidth="2"/>
+                </svg>
+              </button>
+              
+              <button className="p-2 flex items-center justify-center">
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                </svg>
+              </button>
+              
+              <button className="p-2 flex items-center justify-center">
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8h16M4 16h16" />
+                </svg>
+              </button>
+              
+              <button className="p-2 flex items-center justify-center">
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="14" height="14" x="5" y="5" rx="2" strokeWidth="2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        
         <FloatingActionButton 
           isOpen={isFabMenuOpen}
           onToggle={() => setIsFabMenuOpen(!isFabMenuOpen)}

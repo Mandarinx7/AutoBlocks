@@ -307,6 +307,9 @@ const Block = ({
     }
   };
 
+  // Special rendering for console.log block
+  const isConsoleLogBlock = block.type === 'console.log';
+
   return (
     <div
       ref={blockRef}
@@ -322,41 +325,78 @@ const Block = ({
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
-      <div 
-        className={`block-header ${config.headerColor} text-white px-3 py-2 rounded-t-lg flex items-center justify-between cursor-move`}
-      >
-        <span className="font-medium">{config.label}</span>
-        <div className="flex items-center space-x-1">
-          <button 
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-white opacity-80 hover:opacity-100 p-1"
+      {isConsoleLogBlock ? (
+        <>
+          <div 
+            className={`block-header ${config.headerColor} text-white px-3 py-2 rounded-t-lg flex items-center justify-between cursor-move`}
           >
-            <ChevronDown className={`h-4 w-4 transform ${isCollapsed ? '' : 'rotate-180'}`} />
-          </button>
-          <button 
-            onClick={onRemove}
-            className="text-white opacity-80 hover:opacity-100 p-1"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-      
-      {!isCollapsed && (
-        <div className="p-3">
-          <div className="space-y-3">
-            {config.params && config.params.map((param) => (
-              <div key={param.name}>
-                <label className="block text-xs text-gray-600">
-                  {param.label}
-                </label>
-                <div className="relative mt-1">
-                  {renderParamInput(param)}
-                </div>
-              </div>
-            ))}
+            <span className="font-medium">{config.label}</span>
+            <div className="flex items-center space-x-1">
+              <button 
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="text-white opacity-80 hover:opacity-100 p-1"
+              >
+                <ChevronDown className={`h-4 w-4 transform`} />
+              </button>
+              <button 
+                onClick={onRemove}
+                className="text-white opacity-80 hover:opacity-100 p-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        </div>
+          
+          <div className="p-3">
+            <div className="space-y-2">
+              <div className="text-gray-600 text-sm">Message</div>
+              <Input
+                value={block.params.message || 'Hello, world!'}
+                onChange={(e) => onUpdateParams('message', e.target.value)}
+                className="w-full border border-gray-300 rounded px-3 py-1 text-sm"
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div 
+            className={`block-header ${config.headerColor} text-white px-3 py-2 rounded-t-lg flex items-center justify-between cursor-move`}
+          >
+            <span className="font-medium">{config.label}</span>
+            <div className="flex items-center space-x-1">
+              <button 
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="text-white opacity-80 hover:opacity-100 p-1"
+              >
+                <ChevronDown className={`h-4 w-4 transform ${isCollapsed ? '' : 'rotate-180'}`} />
+              </button>
+              <button 
+                onClick={onRemove}
+                className="text-white opacity-80 hover:opacity-100 p-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          
+          {!isCollapsed && (
+            <div className="p-3">
+              <div className="space-y-3">
+                {config.params && config.params.map((param) => (
+                  <div key={param.name}>
+                    <label className="block text-xs text-gray-600">
+                      {param.label}
+                    </label>
+                    <div className="relative mt-1">
+                      {renderParamInput(param)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
       
       {/* Input connection point at top center */}
