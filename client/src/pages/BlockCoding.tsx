@@ -39,11 +39,33 @@ const BlockCoding = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
-  const [currentFlow, setCurrentFlow] = useState<Flow>({
-    id: "flow-" + Date.now(),
-    name: "My Flow",
-    blocks: [],
-    edges: []
+  const [currentFlow, setCurrentFlow] = useState<Flow>(() => {
+    // Create initial flow with example blocks
+    const flowId = "flow-" + Date.now();
+    
+    // Create some example blocks to demonstrate the app
+    const logBlock: Block = {
+      id: `block-${Date.now()}`,
+      type: "console-log",
+      position: { x: 100, y: 150 },
+      params: { message: "Hello, world!" },
+      connections: { inputs: [], outputs: [] }
+    };
+    
+    const variableBlock: Block = {
+      id: `block-${Date.now() + 1}`,
+      type: "variable-declaration",
+      position: { x: 100, y: 300 },
+      params: { name: "greeting", value: "Hello from Block Coding!" },
+      connections: { inputs: [], outputs: [] }
+    };
+    
+    return {
+      id: flowId,
+      name: "My Flow",
+      blocks: [logBlock, variableBlock],
+      edges: []
+    };
   });
   const [generatedCode, setGeneratedCode] = useState("");
   const { toast } = useToast();

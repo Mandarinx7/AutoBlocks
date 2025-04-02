@@ -73,13 +73,16 @@ const Canvas = ({
   return (
     <div 
       ref={canvasRef}
-      className="flex-1 relative bg-gray-100 overflow-hidden"
+      className="flex-1 relative bg-gray-50 overflow-hidden"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
     >
+      {/* Grid Background */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-30" />
+      
       <div 
         className="absolute inset-0 z-10"
         style={{ 
@@ -88,7 +91,7 @@ const Canvas = ({
         }}
       >
         {/* SVG for connectors */}
-        <svg className="absolute inset-0 w-full h-full z-0">
+        <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none">
           {flow.edges.map((edge) => {
             const sourceBlock = flow.blocks.find(b => b.id === edge.source);
             const targetBlock = flow.blocks.find(b => b.id === edge.target);
@@ -96,21 +99,22 @@ const Canvas = ({
             if (!sourceBlock || !targetBlock) return null;
             
             // Calculate connector points
-            const x1 = sourceBlock.position.x + 120; // Assuming block width is 240px
-            const y1 = sourceBlock.position.y + 70;  // Approximate output point
+            const x1 = sourceBlock.position.x + 140; // Adjusted connection point
+            const y1 = sourceBlock.position.y + 40;  // Adjusted output point
             const x2 = targetBlock.position.x;
-            const y2 = targetBlock.position.y + 70;  // Approximate input point
+            const y2 = targetBlock.position.y + 40;  // Adjusted input point
             
-            // Calculate control points for curved connector
-            const deltaX = Math.abs(x2 - x1) * 0.5;
+            // Calculate control points for curved connector with more pronounced curve
+            const deltaX = Math.abs(x2 - x1) * 0.7;
             const path = `M${x1},${y1} C${x1+deltaX},${y1} ${x2-deltaX},${y2} ${x2},${y2}`;
             
             return (
               <path
                 key={edge.id}
                 d={path}
-                className="stroke-purple-500 stroke-2 fill-none"
+                className="stroke-blue-500 stroke-2 fill-none"
                 markerEnd="url(#arrowhead)"
+                style={{ filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1))' }}
               />
             );
           })}
@@ -125,7 +129,7 @@ const Canvas = ({
               refY="3.5"
               orient="auto"
             >
-              <polygon points="0 0, 10 3.5, 0 7" className="fill-purple-500" />
+              <polygon points="0 0, 10 3.5, 0 7" className="fill-blue-500" />
             </marker>
           </defs>
         </svg>
@@ -147,6 +151,22 @@ const Canvas = ({
             />
           );
         })}
+      </div>
+      
+      {/* Zoom controls - visible on mobile */}
+      <div className="absolute bottom-20 right-6 flex flex-col gap-2 z-20 md:hidden">
+        <button 
+          className="w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center"
+          onClick={() => setScale(prev => Math.min(prev + 0.1, 2))}
+        >
+          <span className="text-xl font-bold">+</span>
+        </button>
+        <button 
+          className="w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center"
+          onClick={() => setScale(prev => Math.max(prev - 0.1, 0.5))}
+        >
+          <span className="text-xl font-bold">-</span>
+        </button>
       </div>
     </div>
   );
