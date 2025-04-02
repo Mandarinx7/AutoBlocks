@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Menu, Code, Download, Upload, Play } from "lucide-react";
+import { DownloadButton } from "./DownloadButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -71,15 +72,6 @@ const Toolbar = ({
           >
             <Play className="h-4 w-4 mr-1" />
             Run
-          </Button>
-          <Button 
-            onClick={() => window.location.href = '/api/download-project'} 
-            variant="outline" 
-            size="sm" 
-            className="ml-2"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            ดาวน์โหลด
           </Button>
         </div>
       </div>
